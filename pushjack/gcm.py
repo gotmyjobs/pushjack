@@ -124,7 +124,18 @@ class GCMConnection(object):
         """Send single POST request with message to GCM server."""
         log.debug(('Sending GCM notification batch containing {0} bytes.'
                    .format(len(message))))
-        return self.session.post(self.url, message)
+        try:
+            from google.appengine.api import urlfetch
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'key={}'.format(self.api_key)
+            }
+            return urlfetch.fetch(url=self.url,
+                                  payload=message,
+                                  method=urlfetch.POST,
+                                  headers=headers)
+        except ImportError:
+            return self.session.post(self.url, message)
 
     def send(self, stream):
         """Send messages to GCM server and return list of responses."""
@@ -242,6 +253,8 @@ class GCMResponse(object):
         for response in self.responses:
             try:
                 message = json_loads(response.request.body)
+            except AttributeError:
+                message = json_loads(response.content)
             except (TypeError, ValueError):
                 message = None
 
